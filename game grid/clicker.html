@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>10-Sec Clicker | Game grid</title>
+  <style>
+    body { background: #090d16; color: #f8fafc; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 40px 15px; }
+    .back-btn { color: #38bdf8; text-decoration: none; font-weight: 600; display: inline-block; margin-bottom: 20px; }
+    .stats { display: flex; justify-content: center; gap: 40px; font-size: 1.5rem; margin-bottom: 30px; font-weight: bold; }
+    .stats span { color: #f43f5e; }
+    #clickBtn { width: 250px; height: 250px; border-radius: 50%; background: #1e293b; border: 8px solid #38bdf8; color: #fff; font-size: 2rem; font-weight: 800; cursor: pointer; transition: transform 0.05s; user-select: none; }
+    #clickBtn:active { transform: scale(0.95); background: #38bdf8; color: #090d16; }
+    #clickBtn:disabled { background: #334155; border-color: #475569; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="back-btn">← Back to Game grid</a>
+  <h1>10-Second CPS Clicker</h1>
+  
+  <div class="stats">
+    <div>Time: <span id="time">10</span>s</div>
+    <div>Clicks: <span id="clicks">0</span></div>
+  </div>
+
+  <button id="clickBtn" onclick="registerClick()">Click Me!</button>
+  <h2 id="finalScore" style="margin-top: 20px; color: #10b981;"></h2>
+
+  <script>
+    let clicks = 0;
+    let time = 10;
+    let gameActive = false;
+    let timerInterval;
+
+    const timeDisplay = document.getElementById("time");
+    const clickDisplay = document.getElementById("clicks");
+    const clickBtn = document.getElementById("clickBtn");
+    const finalScore = document.getElementById("finalScore");
+
+    function registerClick() {
+      if (!gameActive && time === 10) {
+        gameActive = true;
+        finalScore.textContent = "";
+        timerInterval = setInterval(() => {
+          time--;
+          timeDisplay.textContent = time;
+          if (time <= 0) endGame();
+        }, 1000);
+      }
+
+      if (gameActive) {
+        clicks++;
+        clickDisplay.textContent = clicks;
+      }
+    }
+
+    function endGame() {
+      gameActive = false;
+      clearInterval(timerInterval);
+      clickBtn.disabled = true;
+      let cps = (clicks / 10).toFixed(1);
+      finalScore.innerHTML = `Time's Up! You got ${clicks} clicks.<br>CPS (Clicks Per Second): <span style="color:#f43f5e">${cps}</span><br><br><button onclick="resetGame()" style="padding:10px 20px; background:#f43f5e; color:#fff; border:none; border-radius:8px; cursor:pointer;">Try Again</button>`;
+    }
+
+    function resetGame() {
+      clicks = 0;
+      time = 10;
+      clickDisplay.textContent = clicks;
+      timeDisplay.textContent = time;
+      clickBtn.disabled = false;
+      finalScore.textContent = "";
+    }
+  </script>
+</body>
+</html>
