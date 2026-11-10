@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Hopmania | Game Grid</title>
+  <style>
+    :root {
+      --bg-color: #060913;
+      --text-color: #f8fafc;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --sub-text: #94a3b8;
+    }
+
+    [data-theme="light"] {
+      --bg-color: #f8fafc;
+      --text-color: #0f172a;
+      --card-bg: #ffffff;
+      --card-border: #cbd5e1;
+      --sub-text: #475569;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-align: center;
+      padding: 15px;
+      margin: 0;
+      transition: background 0.3s, color 0.3s;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 520px;
+      margin: 0 auto 10px;
+    }
+
+    .back-btn {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .theme-btn {
+      background: var(--card-border);
+      color: var(--text-color);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .game-wrapper {
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 16px;
+      padding: 15px;
+      max-width: 520px;
+      margin: 0 auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      background: #0f172a;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #334155;
+    }
+
+    .hud-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .hud-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    .commentary-bar {
+      background: #020617;
+      color: #fde047;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      border: 1px solid #334155;
+      min-height: 20px;
+    }
+
+    canvas {
+      border: 3px solid #334155;
+      border-radius: 12px;
+      display: block;
+      margin: 0 auto 10px;
+      max-width: 100%;
+      background: #090d16;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+    }
+
+    .controls-hint {
+      font-size: 0.85rem;
+      color: var(--sub-text);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <div class="top-bar">
+    <a href="index.html" class="back-btn">← Back to Game Grid</a>
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️ Light Mode</button>
+  </div>
+
+  <div class="game-wrapper">
+    <div class="hud">
+      <div>
+        <div class="hud-label">Score</div>
+        <div class="hud-val" id="scoreVal">0</div>
+      </div>
+      <div>
+        <div class="hud-label">High Score</div>
+        <div class="hud-val" id="bestVal">0</div>
+      </div>
+    </div>
+
+    <div class="commentary-bar" id="commText">🎙️ Use A/D, Arrow keys, or Touch sides to move &amp; hop!</div>
+
+    <canvas id="gameCanvas" width="450" height="520"></canvas>
+
+    <div class="controls-hint">💡 Tap left/right side or use Arrow Keys / A &amp; D to steer!</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Web Audio API Sound Generator
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      if (type === "bounce") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampYToValueAtTime ? osc.frequency.exponentialRampToValueAtTime(380, now + 0.1) : osc.frequency.linearRampToValueAtTime(380, now + 0.1);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === "gameover") {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.linearRampToValueAtTime(70, now + 0.5);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      }
+    }
+
+    const remarks = [
+      "🔥 Mazedaar jump! Aise hi chalte raho!",
+      "🚀 Upar hi upar! Neon vibe ekdam tagdi hai!",
+      "⚡ Reflexes ho toh aise! Pro gamer ban gaye bhai!",
+      "😎 Hopmania master! Record todne wale ho lagta hai!"
+    ];
+
+    function getRemark() {
+      return remarks[Math.floor(Math.random() * remarks.length)];
+    }
+
+    // Game Variables
+    let score = 0;
+    let highScore = localStorage.getItem("gameGridHopmaniaBest") || 0;
+    document.getElementById("bestVal").textContent = highScore;
+
+    let isGameOver = false;
+
+    // Player
+    let player = {
+      x: canvas.width / 2,
+      y: 350,
+      vx: 0,
+      vy: 0,
+      radius: 14,
+      color: "#38bdf8"
+    };
+
+    const gravity = 0.38;
+    const jumpForce = -9.8;
+
+    // Platforms
+    let platforms = [];
+    const platformWidth = 85;
+    const platformHeight = 14;
+
+    function initPlatforms() {
+      platforms = [];
+      // Starting platform right under player
+      platforms.push({ x: canvas.width / 2 - platformWidth / 2, y: 440, color: "#10b981", scored: true });
+
+      // Generate upper platforms
+      let currentY = 360;
+      while (currentY > -50) {
+        let px = Math.random() * (canvas.width - platformWidth - 40) + 20;
+        platforms.push({ x: px, y: currentY, color: "#f43f5e", scored: false });
+        currentY -= 75;
+      }
+    }
+
+    // Input States
+    let keys = { left: false, right: false };
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+      if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+      if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+    });
+
+    // Touch / Mouse steering
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      if (mouseX < canvas.width / 2) {
+        keys.left = true;
+        keys.right = false;
+      } else {
+        keys.right = true;
+        keys.left = false;
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      keys.left = false;
+      keys.right = false;
+    });
+
+    function resetGame() {
+      score = 0;
+      isGameOver = false;
+      player.x = canvas.width / 2;
+      player.y = 200;
+      player.vx = 0;
+      player.vy = 0;
+      initPlatforms();
+      document.getElementById("commText").textContent = "🎙️ Game shuru! Neeli ball ko neon platforms par hop karao!";
+    }
+
+    function update() {
+      if (isGameOver) return;
+
+      // Horizontal movement
+      if (keys.left) player.vx = -4.5;
+      else if (keys.right) player.vx = 4.5;
+      else player.vx *= 0.8;
+
+      player.x += player.vx;
+
+      // Screen wrapping (left-right portal)
+      if (player.x < -player.radius) player.x = canvas.width + player.radius;
+      if (player.x > canvas.width + player.radius) player.x = -player.radius;
+
+      // Vertical Physics & Gravity
+      player.vy += gravity;
+      player.y += player.vy;
+
+      // Platform collision check (Only when falling down)
+      if (player.vy > 0) {
+        platforms.forEach(p => {
+          if (
+            player.x + player.radius > p.x &&
+            player.x - player.radius < p.x + platformWidth &&
+            player.y + player.radius >= p.y &&
+            player.y + player.radius <= p.y + platformHeight + 8
+          ) {
+            player.vy = jumpForce;
+            playSound("bounce");
+
+            if (!p.scored) {
+              p.scored = true;
+              score += 10;
+              if (score % 50 === 0) {
+                document.getElementById("commText").textContent = getRemark();
+              }
+              if (score > highScore) {
+                highScore = score;
+                localStorage.setItem("gameGridHopmaniaBest", highScore);
+                document.getElementById("bestVal").textContent = highScore;
+              }
+            }
+          }
+        });
+      }
+
+      // Camera Scrolling: If player goes above center, scroll everything down
+      const scrollThreshold = canvas.height * 0.45;
+      if (player.y < scrollThreshold) {
+        const diff = scrollThreshold - player.y;
+        player.y = scrollThreshold;
+        platforms.forEach(p => p.y += diff);
+      }
+
+      // Remove platforms off bottom and spawn new ones on top
+      platforms = platforms.filter(p => p.y < canvas.height + 30);
+      while (platforms.length < 8) {
+        let highestY = Math.min(...platforms.map(p => p.y));
+        let px = Math.random() * (canvas.width - platformWidth - 40) + 20;
+        platforms.push({ x: px, y: highestY - 72, color: "#f43f5e", scored: false });
+      }
+
+      // Game Over if player falls below screen
+      if (player.y > canvas.height + 40) {
+        isGameOver = true;
+        playSound("gameover");
+        document.getElementById("commText").textContent = "💀 Game Over! Bahut upar tak gaye the, dobara try karo!";
+      }
+
+      document.getElementById("scoreVal").textContent = score;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Background Grid Effect
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.05)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < canvas.width; i += 30) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+      }
+
+      // Draw Platforms
+      platforms.forEach(p => {
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = p.color;
+        ctx.roundRect ? ctx.beginPath() || ctx.roundRect(p.x, p.y, platformWidth, platformHeight, 6) || ctx.fill() : ctx.fillRect(p.x, p.y, platformWidth, platformHeight);
+        ctx.shadowBlur = 0; // reset
+      });
+
+      // Draw Player Ball with Glow
+      ctx.shadowColor = player.color;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = player.color;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Game Over Screen Overlay
+      if (isGameOver) {
+        ctx.fillStyle = "rgba(6, 9, 19, 0.85)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = "900 32px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#f43f5e";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 25);
+
+        ctx.font = "700 18px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 15);
+
+        ctx.font = "600 14px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillText("Click anywhere or Press SPACE to Restart", canvas.width / 2, canvas.height / 2 + 55);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space" && isGameOver) {
+        resetGame();
+      }
+    });
+
+    canvas.addEventListener("click", () => {
+      if (isGameOver) resetGame();
+    });
+
+    function toggleTheme() {
+      const body = document.body;
+      const btn = document.getElementById("themeBtn");
+      if (body.getAttribute("data-theme") === "dark") {
+        body.setAttribute("data-theme", "light");
+        btn.textContent = "🌙 Dark Mode";
+      } else {
+        body.setAttribute("data-theme", "dark");
+        btn.textContent = "☀️ Light Mode";
+      }
+    }
+
+    resetGame();
+    loop();
+  </script>
+</body>
+</html>

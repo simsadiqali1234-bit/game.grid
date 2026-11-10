@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Player Reviews | Game Grid</title>
+  <style>
+    body { background: #090d16; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 40px 10%; line-height: 1.6; }
+    .back-btn { color: #38bdf8; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px; }
+    h1 { color: #fff; margin-bottom: 5px; }
+    .form-box { background: #1e293b; border: 1px solid #334155; padding: 25px; border-radius: 12px; margin-bottom: 30px; }
+    input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #090d16; border: 1px solid #334155; color: #fff; border-radius: 6px; box-sizing: border-box; outline: none; }
+    button { background: #10b981; color: #fff; border: none; padding: 10px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #059669; }
+    .review-card { background: #1e293b; border: 1px solid #334155; padding: 15px 20px; border-radius: 8px; margin-bottom: 15px; }
+    .reviewer { font-weight: bold; color: #38bdf8; margin-bottom: 5px; }
+    .review-text { color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-btn">← Back to Game Grid</a>
+  <h1>Player Reviews & Feedback</h1>
+  <p style="color: #94a3b8;">Tell us what you think about Game Grid!</p>
+
+  <div class="form-box">
+    <h3>Leave a Review</h3>
+    <input type="text" id="nameInput" placeholder="Your Name...">
+    <textarea id="commentInput" rows="3" placeholder="Write your review here..."></textarea>
+    <button onclick="addReview()">Post Review</button>
+  </div>
+
+  <div id="reviewsList">
+    <div class="review-card">
+      <div class="reviewer">Sadiq Ali</div>
+      <div class="review-text">Game Grid ke sabhi games ekdam mast hain, especially Snake aur Math Puzzles! 🔥</div>
+    </div>
+  </div>
+
+  <script>
+    function addReview() {
+      let name = document.getElementById("nameInput").value.trim();
+      let comment = document.getElementById("commentInput").value.trim();
+
+      if (!name || !comment) {
+        alert("Please fill in both fields!");
+        return;
+      }
+
+      let list = document.getElementById("reviewsList");
+      let card = document.createElement("div");
+      card.className = "review-card";
+      card.innerHTML = `<div class="reviewer">${name}</div><div class="review-text">${comment}</div>`;
+      
+      list.prepend(card);
+      
+      document.getElementById("nameInput").value = "";
+      document.getElementById("commentInput").value = "";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Draw a Perfect Circle | Game grid</title>
+  <style>
+    body { background: #090d16; color: #f8fafc; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; }
+    .back-btn { color: #38bdf8; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 10px; }
+    h1 { color: #ffffff; margin-bottom: 5px; }
+    #scoreDisplay { font-size: 1.6rem; font-weight: 800; color: #f43f5e; margin: 15px 0; min-height: 50px; line-height: 1.4; }
+    canvas { background: #1e293b; border: 2px solid #334155; border-radius: 12px; cursor: crosshair; box-shadow: 0 0 15px rgba(0,0,0,0.5); touch-action: none; }
+    button { background: #f43f5e; color: #fff; border: none; padding: 10px 24px; font-size: 1rem; font-weight: 700; border-radius: 8px; cursor: pointer; margin-top: 15px; }
+    button:hover { background: #e11d48; }
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="back-btn">← Back to Game grid</a>
+  <h1>Draw a Perfect Circle</h1>
+  <p style="color: #94a3b8;">Click and drag inside the box to draw a circle in one smooth motion.</p>
+  
+  <div id="scoreDisplay">Draw your circle!</div>
+  
+  <canvas id="drawCanvas" width="400" height="400"></canvas>
+  <div>
+    <button onclick="resetCanvas()">Try Again</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("drawCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+
+    let isDrawing = false;
+    let points = [];
+
+    canvas.addEventListener("pointerdown", (e) => {
+      isDrawing = true;
+      points = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      scoreDisplay.textContent = "Drawing...";
+      addPoint(e);
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!isDrawing) return;
+      addPoint(e);
+      drawStroke();
+    });
+
+    canvas.addEventListener("pointerup", () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (points.length < 10) {
+        scoreDisplay.textContent = "Draw a full circle!";
+        return;
+      }
+      calculateAccuracy();
+    });
+
+    function addPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      points.push({ x, y });
+    }
+
+    function drawStroke() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (points.length < 2) return;
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+    }
+
+    function calculateAccuracy() {
+      let sumX = 0, sumY = 0;
+      points.forEach(p => { sumX += p.x; sumY += p.y; });
+      let cx = sumX / points.length;
+      let cy = sumY / points.length;
+
+      let sumDist = 0;
+      points.forEach(p => {
+        sumDist += Math.hypot(p.x - cx, p.y - cy);
+      });
+      let avgRadius = sumDist / points.length;
+
+      let varianceSum = 0;
+      points.forEach(p => {
+        let dist = Math.hypot(p.x - cx, p.y - cy);
+        varianceSum += Math.abs(dist - avgRadius);
+      });
+      let avgVariance = varianceSum / points.length;
+
+      let score = Math.max(0, 100 - (avgVariance / avgRadius) * 100);
+      
+      ctx.strokeStyle = "#10b981";
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, avgRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      let remark = "";
+      if (score >= 90) {
+        remark = "🔥 Ekdum ustaad ho bhai! Perfect circle!";
+      } else if (score >= 75) {
+        remark = "👍 Badhiya! Thoda sa aur practice chahiye.";
+      } else if (score >= 50) {
+        remark = "😅 Chalega, par circle se zyada polygon lag raha hai!";
+      } else {
+        remark = "💀 Yeh gol hai ya andaa? Dobara try karo!";
+      }
+
+      scoreDisplay.innerHTML = `🎯 Accuracy: ${score.toFixed(1)}%<br><span style="font-size: 1.1rem; color: #38bdf8;">${remark}</span>`;
+    }
+
+    function resetCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      points = [];
+      scoreDisplay.textContent = "Draw your circle!";
+    }
+  </script>
+</body>
+</html>
